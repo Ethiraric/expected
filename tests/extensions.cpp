@@ -675,6 +675,140 @@ TEST_CASE("And then with extensions", "[extensions.and_then_with]") {
   }
 }
 
+TEST_CASE("Map with extensions", "[extensions.map_with]") {
+  auto mul2 = [](char const* a, int b) { return b * 2; };
+  auto ret_void = [](char const* a,int b) {};
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.map_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.map_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.map_with(ret_void, "foo");
+    REQUIRE(ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.map_with(ret_void, "foo");
+    REQUIRE(ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_with(ret_void, "foo");
+    REQUIRE(ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_with(ret_void, "foo");
+    REQUIRE(ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_with(ret_void, "foo");
+    REQUIRE(!ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_with(ret_void, "foo");
+    REQUIRE(!ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_with(ret_void, "foo");
+    REQUIRE(!ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_with(ret_void, "foo");
+    REQUIRE(!ret);
+    STATIC_REQUIRE(
+        (std::is_same<decltype(ret), tl::expected<void, int>>::value));
+  }
+
+
+  // map_withping functions which return references
+  {
+    tl::expected<int, int> e(42);
+    auto ret = e.map_with([](int& i) -> int& { return i; });
+    REQUIRE(ret);
+    REQUIRE(ret == 42);
+  }
+}
+
 struct S {
     int x;
 };
