@@ -809,6 +809,115 @@ TEST_CASE("Map with extensions", "[extensions.map_with]") {
   }
 }
 
+TEST_CASE("Map error with extensions", "[extensions.map_error_with]") {
+  auto mul2 = [](char const *a, int b) { return b * 2; };
+  auto ret_void = [](char const *a, int b) {};
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.map_error_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.map_error_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_error_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_error_with(mul2, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_error_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 42);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_error_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 42);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_error_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 42);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_error_with(mul2, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 42);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.map_error_with(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.map_error_with(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_error_with(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).map_error_with(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_error_with(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.map_error_with(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_error_with(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).map_error_with(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+}
+
 struct S {
     int x;
 };
