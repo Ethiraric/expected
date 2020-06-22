@@ -1686,6 +1686,32 @@ public:
 #endif
 #endif
 
+  template <class F, class... Args>
+  expected TL_EXPECTED_11_CONSTEXPR or_else_with(F &&f, Args &&... args) & {
+    return or_else_with_impl(*this, std::forward<F>(f),
+                             std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  expected TL_EXPECTED_11_CONSTEXPR or_else_with(F &&f, Args &&... args) && {
+    return or_else_with_impl(std::move(*this), std::forward<F>(f),
+                             std::forward<Args>(args)...);
+  }
+
+  template <class F, class... Args>
+  expected constexpr or_else_with(F &&f, Args &&... args) const & {
+    return or_else_with_impl(*this, std::forward<F>(f),
+                             std::forward<Args>(args)...);
+  }
+
+#ifndef TL_EXPECTED_NO_CONSTRR
+  template <class F, class... Args>
+  expected constexpr or_else_with(F &&f, Args &&... args) const && {
+    return or_else_with_impl(std::move(*this), std::forward<F>(f),
+                             std::forward<Args>(args)...);
+  }
+#endif
+
   constexpr expected() = default;
   constexpr expected(const expected &rhs) = default;
   constexpr expected(expected &&rhs) = default;
@@ -2817,6 +2843,60 @@ detail::decay_t<Exp> or_else_impl(Exp &&exp, F &&f) {
          ? std::forward<Exp>(exp)
          : (detail::invoke(std::forward<F>(f), std::forward<Exp>(exp).error()),
             std::forward<Exp>(exp));
+}
+#endif
+
+#ifdef TL_EXPECTED_CXX14
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              std::declval<Exp>().error())),
+          detail::enable_if_t<!std::is_void<Ret>::value> * = nullptr>
+constexpr auto or_else_with_impl(Exp &&exp, F &&f, Args &&... args) {
+  static_assert(detail::is_expected<Ret>::value, "F must return an expected");
+  return exp.has_value()
+             ? std::forward<Exp>(exp)
+             : detail::invoke(std::forward<F>(f), std::forward<Args>(args)...,
+                              std::forward<Exp>(exp).error());
+}
+
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              std::declval<Exp>().error())),
+          detail::enable_if_t<std::is_void<Ret>::value> * = nullptr>
+detail::decay_t<Exp> or_else_with_impl(Exp &&exp, F &&f, Args &&... args) {
+  return exp.has_value()
+             ? std::forward<Exp>(exp)
+             : (detail::invoke(std::forward<F>(f), std::forward<Args>(args)...,
+                               std::forward<Exp>(exp).error()),
+                std::forward<Exp>(exp));
+}
+#else
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              std::declval<Exp>().error())),
+          detail::enable_if_t<!std::is_void<Ret>::value> * = nullptr>
+auto or_else_with_impl(Exp &&exp, F &&f, Args &&... args) -> Ret {
+  static_assert(detail::is_expected<Ret>::value, "F must return an expected");
+  return exp.has_value()
+             ? std::forward<Exp>(exp)
+             : detail::invoke(std::forward<F>(f), std::forward<Args>(args)...,
+                              std::forward<Exp>(exp).error());
+}
+
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              std::declval<Exp>().error())),
+          detail::enable_if_t<std::is_void<Ret>::value> * = nullptr>
+detail::decay_t<Exp> or_else_with_impl(Exp &&exp, F &&f, Args &&... args) {
+  return exp.has_value()
+             ? std::forward<Exp>(exp)
+             : (detail::invoke(std::forward<F>(f), std::forward<Args>(args)...,
+                               std::forward<Exp>(exp).error()),
+                std::forward<Exp>(exp));
 }
 #endif
 } // namespace detail

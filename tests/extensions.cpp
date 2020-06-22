@@ -918,6 +918,195 @@ TEST_CASE("Map error with extensions", "[extensions.map_error_with]") {
   }
 }
 
+TEST_CASE("or_else_with", "[extensions.or_else_with]") {
+  using eptr = std::unique_ptr<int>;
+  auto succeed = [](char const* f, int a) { return tl::expected<int, int>(21 * 2); };
+  auto succeedptr = [](char const* f, eptr e) { return tl::expected<int,eptr>(21*2);};
+  auto fail =    [](char const* f, int a) { return tl::expected<int,int>(tl::unexpect, 17);};
+  auto efail =   [](char const* f, eptr e) { *e = 17;return tl::expected<int,eptr>(tl::unexpect, std::move(e));};
+  auto failptr = [](char const* f, eptr e) { return tl::expected<int,eptr>(tl::unexpect, std::move(e));};
+  auto failvoid = [](char const* f, int) {};
+  auto failvoidptr = [](char const* f, const eptr&) { /* don't consume */};
+  auto consumeptr = [](char const* f, eptr) {};
+  auto make_u_int = [](int n) { return std::unique_ptr<int>(new int(n));};
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, eptr> e = 21;
+    auto ret = std::move(e).or_else_with(succeedptr, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.or_else_with(fail, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.or_else_with(fail, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).or_else_with(fail, "foo");
+    REQUIRE(ret);
+    REQUIRE(ret == 21);
+  }
+
+
+  {
+    tl::expected<int, eptr> e = 21;
+    auto ret = std::move(e).or_else_with(efail, "foo");
+    REQUIRE(ret);
+    REQUIRE(ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).or_else_with(fail, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    tl::expected<int, eptr> e(tl::unexpect, make_u_int(21));
+    auto ret = std::move(e).or_else_with(succeedptr, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(succeed, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 42);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(fail, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 17);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(failvoid, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(fail, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 17);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.or_else_with(failvoid, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(fail, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 17);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(failvoid, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, eptr> e(tl::unexpect, make_u_int(21));
+    auto ret = std::move(e).or_else_with(failvoidptr, "foo");
+    REQUIRE(!ret);
+    REQUIRE(*ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, eptr> e(tl::unexpect, make_u_int(21));
+    auto ret = std::move(e).or_else_with(consumeptr, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == nullptr);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(fail, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 17);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).or_else_with(failvoid, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+}
+
 struct S {
     int x;
 };
