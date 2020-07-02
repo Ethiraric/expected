@@ -1188,6 +1188,115 @@ TEST_CASE("Pass Through extensions", "[extensions.pass_through]") {
   }
 }
 
+TEST_CASE("Pass error through extensions", "[extensions.pass_error_through]") {
+  auto ret_void = [](char const *a, int& b) { b += 2;};
+  auto ret_void_const = [](char const *a, int const& b) { };
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.pass_error_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.pass_error_through(ret_void_const, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_error_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_error_through(ret_void_const, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_error_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 23);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_error_through(ret_void_const, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_error_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 23);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_error_through(ret_void_const, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.pass_error_through(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.pass_error_through(ret_void_const, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_error_through(ret_void, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_error_through(ret_void_const, "foo");
+    REQUIRE(ret);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_error_through(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_error_through(ret_void_const, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_error_through(ret_void, "foo");
+    REQUIRE(!ret);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_error_through(ret_void_const, "foo");
+    REQUIRE(!ret);
+  }
+}
+
 
 struct S {
     int x;
