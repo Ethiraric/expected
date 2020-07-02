@@ -1448,6 +1448,66 @@ public:
 #if defined(TL_EXPECTED_CXX14) && !defined(TL_EXPECTED_GCC49) &&               \
     !defined(TL_EXPECTED_GCC54) && !defined(TL_EXPECTED_GCC55)
   template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR auto pass_through(F &&f, Args &&... args) & {
+    return expected_pass_through_impl(*this, std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+  template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR auto pass_through(F &&f, Args &&... args) && {
+    return expected_pass_through_impl(std::move(*this), std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+  template <class F, class... Args>
+  constexpr auto pass_through(F &&f, Args &&... args) const & {
+    return expected_pass_through_impl(*this, std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+  template <class F, class... Args>
+  constexpr auto pass_through(F &&f, Args &&... args) const && {
+    return expected_pass_through_impl(std::move(*this), std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+#else
+  template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR decltype(expected_pass_through_impl(
+      std::declval<expected &>(), std::declval<F &&>(),
+      std::declval<Args &&>()...))
+  pass_through(F &&f, Args &&... args) & {
+    return expected_pass_through_impl(*this, std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+  template <class F, class... Args>
+  TL_EXPECTED_11_CONSTEXPR decltype(
+      expected_pass_through_impl(std::declval<expected>(), std::declval<F &&>(),
+                                 std::declval<Args &&>()...))
+  pass_through(F &&f, Args &&... args) && {
+    return expected_pass_through_impl(std::move(*this), std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+  template <class F, class... Args>
+  constexpr decltype(
+      expected_pass_through_impl(std::declval<const expected &>(),
+                                 std::declval<F &&>(), std::declval<Args>()...))
+  pass_through(F &&f, Args &&... args) const & {
+    return expected_pass_through_impl(*this, std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+
+#ifndef TL_EXPECTED_NO_CONSTRR
+  template <class F, class... Args>
+  constexpr decltype(expected_pass_through_impl(
+      std::declval<const expected &&>(), std::declval<F &&>(),
+      std::declval<Args &&>()...))
+  pass_through(F &&f, Args &&... args) const && {
+    return expected_pass_through_impl(std::move(*this), std::forward<F>(f),
+                                      std::forward<Args>(args)...);
+  }
+#endif
+#endif
+
+#if defined(TL_EXPECTED_CXX14) && !defined(TL_EXPECTED_GCC49) &&               \
+    !defined(TL_EXPECTED_GCC54) && !defined(TL_EXPECTED_GCC55)
+  template <class F, class... Args>
   TL_EXPECTED_11_CONSTEXPR auto map_with(F &&f, Args &&... args) & {
     return expected_map_with_impl(*this, std::forward<F>(f),
                                   std::forward<Args>(args)...);
@@ -2426,6 +2486,44 @@ auto expected_map_impl(Exp &&exp, F &&f) -> expected<void, err_t<Exp>> {
 
   return unexpected<err_t<Exp>>(std::forward<Exp>(exp).error());
 }    
+#endif
+
+#ifdef TL_EXPECTED_CXX14
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              *std::declval<Exp>()))>
+auto expected_pass_through_impl(Exp &&exp, F &&f, Args &&... args) {
+  static_assert(!std::is_void<exp_t<Exp>>::value,
+                "pass_through expected must not be void. Use map otherwise.");
+  static_assert(std::is_void<Ret>::value,
+                "pass_through callable must return void. Use map otherwise.");
+  using result = detail::decay_t<Exp>;
+  if (exp.has_value()) {
+    detail::invoke(std::forward<F>(f), std::forward<Args>(args)..., *exp);
+    return result(*std::forward<Exp>(exp));
+  }
+
+  return result{unexpect, std::forward<Exp>(exp).error()};
+}
+#else
+template <class Exp, class F, class... Args,
+          class Ret = decltype(detail::invoke(std::declval<F>(),
+                                              std::declval<Args>()...,
+                                              *std::declval<Exp>()))>
+constexpr auto expected_pass_through_impl(Exp &&exp, F &&f, Args &&... args)
+    -> detail::decay_t<Exp> {
+  static_assert(!std::is_void<exp_t<Exp>>::value,
+                "pass_through expected must not be void. Use map otherwise.");
+  static_assert(std::is_void<Ret>::value,
+                "pass_through callable must return void. Use map otherwise.");
+  using result = detail::decay_t<Exp>;
+
+  return exp.has_value() ? (detail::invoke(std::forward<F>(f),
+                                           std::forward<Args>(args)..., *exp),
+                            result{*std::forward<Exp>(exp)})
+                         : result{unexpect, std::forward<Exp>(exp).error()};
+}
 #endif
 
 #ifdef TL_EXPECTED_CXX14

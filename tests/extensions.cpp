@@ -679,11 +679,15 @@ TEST_CASE("Map with extensions", "[extensions.map_with]") {
   auto mul2 = [](char const* a, int b) { return b * 2; };
   auto ret_void = [](char const* a,int b) {};
 
+  struct S { int f(int i) { return 3; } };
   {
     tl::expected<int, int> e = 21;
     auto ret = e.map_with(mul2, "foo");
     REQUIRE(ret);
     REQUIRE(*ret == 42);
+    S s;
+    auto x = ret.map_with(&S::f, &s);
+    REQUIRE(x == 3);
   }
 
   {
@@ -1106,6 +1110,84 @@ TEST_CASE("or_else_with", "[extensions.or_else_with]") {
     REQUIRE(ret.error() == 21);
   }
 }
+
+TEST_CASE("Pass Through extensions", "[extensions.pass_through]") {
+  auto ret_void = [](char const* a, int b) {};
+  auto ret_void_add_one = [](char const* a, int& b) { ++b; };
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.pass_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = e.pass_through(ret_void_add_one, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 22);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = e.pass_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    const tl::expected<int, int> e = 21;
+    auto ret = std::move(e).pass_through(ret_void, "foo");
+    REQUIRE(ret);
+    REQUIRE(*ret == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = e.pass_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+  {
+    const tl::expected<int, int> e(tl::unexpect, 21);
+    auto ret = std::move(e).pass_through(ret_void, "foo");
+    REQUIRE(!ret);
+    REQUIRE(ret.error() == 21);
+  }
+
+
+  // map_withping functions which return references
+  {
+    tl::expected<int, int> e(42);
+    auto ret = e.map_with([](int& i) -> int& { return i; });
+    REQUIRE(ret);
+    REQUIRE(ret == 42);
+  }
+}
+
 
 struct S {
     int x;
