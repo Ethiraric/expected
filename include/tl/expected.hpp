@@ -237,9 +237,12 @@ struct is_pointer_to_non_const_member_func<Ret(T::*) (Args...) volatile &> : std
 template <class T, class Ret, class... Args>
 struct is_pointer_to_non_const_member_func<Ret(T::*) (Args...) volatile &&> : std::true_type {};
 
-template <class T> struct is_const_or_const_ref : std::false_type {};
-template <class T> struct is_const_or_const_ref<T const&> : std::true_type {};
-template <class T> struct is_const_or_const_ref<T const> : std::true_type {};
+template <class... Ts>
+struct is_first_arg_const_or_const_ref : std::false_type {};
+template <class T, class... Ts>
+struct is_first_arg_const_or_const_ref<T const&, Ts...> : std::true_type {};
+template <class T, class... Ts>
+struct is_first_arg_const_or_const_ref<T const, Ts...> : std::true_type {};
 #endif
 
 // std::invoke from C++17
@@ -247,7 +250,7 @@ template <class T> struct is_const_or_const_ref<T const> : std::true_type {};
 template <typename Fn, typename... Args,
 #ifdef TL_TRAITS_LIBCXX_MEM_FN_WORKAROUND
   typename = enable_if_t<!(is_pointer_to_non_const_member_func<Fn>::value
-    && is_const_or_const_ref<Args...>::value)>,
+    && is_first_arg_const_or_const_ref<Args...>::value)>,
 #endif
   typename = enable_if_t<std::is_member_pointer<decay_t<Fn>>::value>,
   int = 0>
@@ -1545,9 +1548,9 @@ public:
                                   std::forward<Args>(args)...);
   }
   template <class F, class... Args>
-  constexpr decltype(expected_map_with_impl(std::declval<const expected &>(),
-                                            std::declval<F &&>(),
-                                            std::declval<Args>()...))
+  TL_EXPECTED_11_CONSTEXPR decltype(
+      expected_map_with_impl(std::declval<const expected &>(),
+                             std::declval<F &&>(), std::declval<Args>()...))
   map_with(F &&f, Args &&... args) const & {
     return expected_map_with_impl(*this, std::forward<F>(f),
                                   std::forward<Args>(args)...);
@@ -1555,9 +1558,9 @@ public:
 
 #ifndef TL_EXPECTED_NO_CONSTRR
   template <class F, class... Args>
-  constexpr decltype(expected_map_with_impl(std::declval<const expected &&>(),
-                                            std::declval<F &&>(),
-                                            std::declval<Args &&>()...))
+  TL_EXPECTED_11_CONSTEXPR decltype(
+      expected_map_with_impl(std::declval<const expected &&>(),
+                             std::declval<F &&>(), std::declval<Args &&>()...))
   map_with(F &&f, Args &&... args) const && {
     return expected_map_with_impl(std::move(*this), std::forward<F>(f),
                                   std::forward<Args>(args)...);
@@ -2553,7 +2556,8 @@ template <class Exp, class F, class... Args,
           class Ret = decltype(detail::invoke(std::declval<F>(),
                                               std::declval<Args>()...,
                                               *std::declval<Exp>()))>
-auto expected_pass_through_impl(Exp &&exp, F &&f, Args &&... args) {
+detail::decay_t<Exp> expected_pass_through_impl(Exp &&exp, F &&f,
+                                                Args &&... args) {
   static_assert(!std::is_void<exp_t<Exp>>::value,
                 "pass_through expected must not be void. Use map otherwise.");
   static_assert(std::is_void<Ret>::value,
@@ -2571,8 +2575,8 @@ template <class Exp, class F, class... Args,
           class Ret = decltype(detail::invoke(std::declval<F>(),
                                               std::declval<Args>()...,
                                               *std::declval<Exp>()))>
-constexpr auto expected_pass_through_impl(Exp &&exp, F &&f, Args &&... args)
-    -> detail::decay_t<Exp> {
+constexpr detail::decay_t<Exp> expected_pass_through_impl(Exp &&exp, F &&f,
+                                                          Args &&... args) {
   static_assert(!std::is_void<exp_t<Exp>>::value,
                 "pass_through expected must not be void. Use map otherwise.");
   static_assert(std::is_void<Ret>::value,
